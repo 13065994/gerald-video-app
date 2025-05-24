@@ -5,34 +5,27 @@ const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(cors());// Enable CORS for all origins
-
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+app.use(cors()); // Enable CORS for all origins
 
 app.post('/download', async (req, res) => {
-  const { url, format } = req.body;
+  const { url } = req.body;
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
+
   try {
     if (ytdl.validateURL(url)) {
       const info = await ytdl.getInfo(url);
       const title = info.videoDetails.title.replace(/[\/\\?%*:|"<>]/g, '-');
-      if (format === 'mp3') {
-        res.setHeader('Content-Disposition', `attachment; filename="${title}.mp3"`);
-        ytdl(url, { filter: 'audioonly', quality: 'highestaudio' }).pipe(res);
-      } else {
-        res.setHeader('Content-Disposition', `attachment; filename="${title}.mp4"`);
-        ytdl(url, { quality: 'highestvideo' }).pipe(res);
-      }
+      res.setHeader('Content-Disposition', `attachment; filename="${title}.mp4"`);
+      ytdl(url, { quality: 'highestvideo' }).pipe(res);
     } else {
       const response = await axios({
         method: 'GET',
         url,
         responseType: 'stream',
       });
+
       let filename = 'downloaded_file';
       const disposition = response.headers['content-disposition'];
       if (disposition && disposition.includes('filename=')) {
@@ -43,6 +36,7 @@ app.post('/download', async (req, res) => {
       } else {
         filename = new URL(url).pathname.split('/').pop();
       }
+
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       response.data.pipe(res);
     }
